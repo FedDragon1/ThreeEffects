@@ -2,22 +2,25 @@ import * as THREE from "three";
 // @ts-ignore
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 
-import { EffectComposer } from "postprocessing";
+import {
+    BlendFunction,
+    BloomEffect,
+    DotScreenEffect,
+    EffectComposer,
+    EffectPass,
+    GlitchEffect,
+    RenderPass
+} from "postprocessing";
 import { registerCanvasResizeListener } from "@/lib/threeHelper";
 
-let cachedModel: THREE.Mesh | null = null;
-
 const loadModel = async (): Promise<THREE.Mesh> => {
-    if (cachedModel) return cachedModel.clone()
-
     return new Promise((resolve, reject) => {
         const loader = new GLTFLoader();
         loader.load(
             '/cherry_blossom_petal/petal.glb',
             (gltf: any) => {
-                cachedModel = gltf.scene.children[0].children[0];
                 // @ts-ignore
-                resolve(cachedModel?.clone());
+                resolve(gltf.scene.children[0].children[0]);
             },
             undefined,
             reject
@@ -109,7 +112,7 @@ class Petal extends THREE.Object3D {
         if (alpha <= 0.5) {
             return 0
         }
-        return -10 * (alpha - 0.5)
+        return -(Math.pow(5.8 * (alpha - 0.5), 1.5))
     }
 
     update(rawAlpha: number) {
@@ -183,7 +186,7 @@ export function onCanvasLoad(canvas: HTMLCanvasElement) {
     flower.rotateX(Math.PI / 6)
     scene.add(flower)
 
-    const pointLight = new THREE.PointLight(0xffffff, 40)
+    const pointLight = new THREE.PointLight(0xffffff, 30)
     pointLight.position.set(-2, 2, 2)
     scene.add(pointLight)
 
@@ -195,6 +198,18 @@ export function onCanvasLoad(canvas: HTMLCanvasElement) {
     const composer = new EffectComposer(renderer, {
         frameBufferType: THREE.FloatType
     })
+    composer.addPass(new RenderPass(scene, camera))
+    composer.addPass(new EffectPass(camera, new BloomEffect({
+        intensity: 3,
+        luminanceThreshold: 0.2,
+        luminanceSmoothing: 5,
+        blendFunction: BlendFunction.AVERAGE
+    })))
+    composer.addPass(new EffectPass(camera, new GlitchEffect({
+        blendFunction:BlendFunction.NORMAL,
+        duration: new THREE.Vector2(0.1, 0.2),
+        strength: new THREE.Vector2(0.01, 0.1),
+    })))
 
     const resizeCleanUp = registerCanvasResizeListener({ canvas, renderer, composer, camera })
 
@@ -208,7 +223,7 @@ export function onCanvasLoad(canvas: HTMLCanvasElement) {
         flower.update(delta / 3)
 
         handle = requestAnimationFrame(render)
-        renderer.render(scene, camera)
+        composer.render()
     }
 
     render()
