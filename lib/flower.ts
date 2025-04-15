@@ -5,7 +5,6 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import {
     BlendFunction,
     BloomEffect,
-    DotScreenEffect,
     EffectComposer,
     EffectPass,
     GlitchEffect,
@@ -204,11 +203,6 @@ export function onCanvasLoad(canvas: HTMLCanvasElement) {
         luminanceThreshold: 0.2,
         luminanceSmoothing: 5,
         blendFunction: BlendFunction.AVERAGE
-    })))
-    composer.addPass(new EffectPass(camera, new GlitchEffect({
-        blendFunction:BlendFunction.NORMAL,
-        duration: new THREE.Vector2(0.1, 0.2),
-        strength: new THREE.Vector2(0.01, 0.1),
     })))
 
     const resizeCleanUp = registerCanvasResizeListener({ canvas, renderer, composer, camera })
