@@ -12,6 +12,7 @@
     "dat.gui": "^0.7.9",
     "next": "15.3.0",
     "postprocessing": "^6.37.2",
+    "raw-loader": "^4.0.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "three": "^0.175.0"
