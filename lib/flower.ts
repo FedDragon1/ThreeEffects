@@ -7,10 +7,10 @@ import {
     BloomEffect,
     EffectComposer,
     EffectPass,
-    GlitchEffect,
-    RenderPass
+    RenderPass,
 } from "postprocessing";
-import { registerCanvasResizeListener } from "@/lib/threeHelper";
+import { registerCanvasResizeListener, registerMouseMoveListener } from "@/lib/threeHelper";
+import { HalftoneEffect } from "@/lib/shaders/Halftone";
 
 const loadModel = async (): Promise<THREE.Mesh> => {
     return new Promise((resolve, reject) => {
@@ -174,7 +174,7 @@ export function onCanvasLoad(canvas: HTMLCanvasElement) {
     const renderer = new THREE.WebGLRenderer({
         canvas,
         alpha: true,
-        antialias: true
+        antialias: false
     })
     camera.position.set(0, 0, 4);
 
@@ -195,26 +195,48 @@ export function onCanvasLoad(canvas: HTMLCanvasElement) {
     // COMPOSING & HOOKS
 
     const composer = new EffectComposer(renderer, {
-        frameBufferType: THREE.FloatType
+        frameBufferType: THREE.FloatType,
+    })
+    const halftone = new HalftoneEffect({
+        u_gridDensity: 0,
     })
     composer.addPass(new RenderPass(scene, camera))
+    composer.addPass(new EffectPass(camera, halftone))
     composer.addPass(new EffectPass(camera, new BloomEffect({
-        intensity: 3,
+        intensity: 20,
         luminanceThreshold: 0.2,
         luminanceSmoothing: 5,
         blendFunction: BlendFunction.AVERAGE
     })))
 
     const resizeCleanUp = registerCanvasResizeListener({ canvas, renderer, composer, camera })
+    const moveCleanUp = registerMouseMoveListener(canvas, (u, v) => {
+        const up = (u - 0.5) / 2,
+            vp = (v - 0.5) / 2
+
+        flower.quaternion.identity()
+        flower.rotateY(up)
+        flower.rotateZ(Math.PI / 4)
+        flower.rotateX(Math.PI / 6 + vp)
+    })
 
     // RENDER LOOP
     const clock = new THREE.Clock()
+
+    const delay = 0.5
+    const duration = 3
+    const rate = (x: number) => 1 - (Math.sin(2 * Math.PI * x)) / (2 * Math.PI * x)
 
     let handle: number
 
     function render() {
         const delta = clock.getElapsedTime()
         flower.update(delta / 3)
+
+        if (delay < delta && delta < delay + duration) {
+            const alpha = rate((delta - delay) / duration)
+            halftone.density = Math.floor(alpha * 100 + 50)
+        }
 
         handle = requestAnimationFrame(render)
         composer.render()
@@ -230,6 +252,7 @@ export function onCanvasLoad(canvas: HTMLCanvasElement) {
     return () => {
         cancelAnimationFrame(getHandle())
         resizeCleanUp()
+        moveCleanUp()
         renderer.dispose()
     }
 }

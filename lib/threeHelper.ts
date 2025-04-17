@@ -57,3 +57,20 @@ export function registerCanvasResizeListener(obj: {
         cancelAnimationFrame(handle)
     }
 }
+
+export function registerMouseMoveListener(canvas: HTMLCanvasElement, callback: (u: number, v: number) => void) {
+    const listener = (e: MouseEvent) => {
+        const rect = canvas.getBoundingClientRect()
+
+        const mouseX = e.clientX - rect.left
+        const mouseY = e.clientY - rect.top
+        const u = mouseX / rect.width
+        const v = mouseY / rect.height
+
+        callback(u, v)
+    }
+
+    document.addEventListener("mousemove", listener)
+
+    return () => document.removeEventListener("mousemove", listener)
+}

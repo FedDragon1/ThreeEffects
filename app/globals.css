@@ -19,3 +19,33 @@ body {
   z-index: 9999 !important;
   position: absolute !important;
 }
+
+@keyframes show-up-from-bottom {
+  0% {
+    transform: translateY(50px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes show-up-from-right {
+  0% {
+    transform: translateX(100px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.anim-b {
+  animation: show-up-from-bottom 0.7s cubic-bezier(.46,.41,.57,.97) forwards;
+}
+
+.anim-r {
+  animation: show-up-from-right 0.7s cubic-bezier(.46,.41,.57,.97) forwards;
+}

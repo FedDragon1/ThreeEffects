@@ -31,7 +31,7 @@ const Flower: FC<FlowerProps> = ({ className }) => {
 
     return (
         <div className={className}>
-            <canvas ref={canvasCallback} className={"w-full h-full"}></canvas>
+            <canvas ref={canvasCallback} className={"w-full aspect-square"}></canvas>
         </div>
     )
 }

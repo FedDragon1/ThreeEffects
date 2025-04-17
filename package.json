@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "dat.gui": "^0.7.9",
+    "gsap": "^3.12.7",
     "next": "15.3.0",
     "postprocessing": "^6.37.2",
     "raw-loader": "^4.0.2",
