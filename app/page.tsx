@@ -4,7 +4,7 @@ export default function Home() {
     return (
         <div className={"w-screen h-screen relative bg-stone-300"}>
             <div className={"w-full h-full fixed top-0 flex items-center justify-center"}>
-                <Flower className={"flex-grow max-w-[100vh]"}></Flower>
+                <Flower className={"flex-grow max-w-[100vh] anim-show"}></Flower>
             </div>
             <div className={"w-full h-full flex flex-col justify-between px-10 py-12 z-10"}>
                 <div className={"w-full flex justify-between"}>

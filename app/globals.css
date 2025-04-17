@@ -42,10 +42,23 @@ body {
   }
 }
 
+@keyframes show-up {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
 .anim-b {
   animation: show-up-from-bottom 0.7s cubic-bezier(.46,.41,.57,.97) forwards;
 }
 
 .anim-r {
   animation: show-up-from-right 0.7s cubic-bezier(.46,.41,.57,.97) forwards;
+}
+
+.anim-show {
+  animation: show-up 0.5s ease-in-out forwards 0.5s;
 }
