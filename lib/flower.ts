@@ -11,6 +11,7 @@ import {
 } from "postprocessing";
 import { registerCanvasResizeListener, registerMouseMoveListener } from "@/lib/threeHelper";
 import { HalftoneEffect } from "@/lib/shaders/Halftone";
+import gsap from "gsap";
 
 const loadModel = async (): Promise<THREE.Mesh> => {
     return new Promise((resolve, reject) => {
@@ -209,15 +210,31 @@ export function onCanvasLoad(canvas: HTMLCanvasElement) {
         blendFunction: BlendFunction.AVERAGE
     })))
 
+    // flower.rotation.order = "YZX"
     const resizeCleanUp = registerCanvasResizeListener({ canvas, renderer, composer, camera })
     const moveCleanUp = registerMouseMoveListener(canvas, (u, v) => {
         const up = (u - 0.5) / 2,
             vp = (v - 0.5) / 2
 
-        flower.quaternion.identity()
-        flower.rotateY(up)
-        flower.rotateZ(Math.PI / 4)
-        flower.rotateX(Math.PI / 6 + vp)
+        gsap.to(flower.rotation, {
+            x: up,
+            y: Math.PI / 4,
+            z: Math.PI / 6 + vp,
+            duration: 0.5,
+            ease: "power2.out",
+            overwrite: true,
+            onUpdate() {
+                flower.quaternion.setFromEuler(flower.rotation)
+            }
+        })
+
+        gsap.to(flower.position, {
+            x: up,
+            y: -vp,
+            duration: 0.5,
+            ease: "power2.out",
+            overwrite: true
+        })
     })
 
     // RENDER LOOP
