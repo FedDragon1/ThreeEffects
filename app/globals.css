@@ -60,5 +60,5 @@ body {
 }
 
 .anim-show {
-  animation: show-up 0.5s ease-in-out forwards 0.5s;
+  animation: show-up 0.5s ease-in-out forwards 0.4s;
 }
