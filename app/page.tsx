@@ -1,4 +1,5 @@
 import Flower from "@/components/Flower";
+import Link from "next/link";
 
 export default function Home() {
     return (
@@ -15,12 +16,12 @@ export default function Home() {
                     <div className={"flex gap-10 items-center anim-b opacity-0 ![animation-delay:100ms]"}>
                         <span>Works</span>
                         <span>Contact</span>
-                        <div className={"bg-neutral-900 rounded-full flex items-center gap-2 p-2"}>
+                        <Link href={"/test"} className={"bg-neutral-900 rounded-full flex items-center gap-2 p-2 cursor-pointer"}>
                             <span className={"text-neutral-100 pl-2"}>Learn More</span>
                             <div className={"flex p-2 rounded-full bg-neutral-100 items-center justify-center size-8"}>
                                 <span className={"text-xl"}>&gt;</span>
                             </div>
-                        </div>
+                        </Link>
                     </div>
                 </div>
                 <div className={"flex flex-col gap-16"}>
