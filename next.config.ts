@@ -28,7 +28,10 @@ const nextConfig: NextConfig = {
                 as: "*.js"
             }
         }
-    }
+    },
+    allowedDevOrigins: [
+        "dev.fedele.us"
+    ]
 };
 
 export default nextConfig;
