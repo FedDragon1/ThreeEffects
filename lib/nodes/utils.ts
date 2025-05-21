@@ -1,34 +1,5 @@
 import * as THREE from 'three';
-
-export class Face {
-    constructor(public a: THREE.Vector3, public b: THREE.Vector3, public c: THREE.Vector3) {}
-
-    get normal(): THREE.Vector3 {
-        const ab = new THREE.Vector3().subVectors(this.b, this.a);
-        const ac = new THREE.Vector3().subVectors(this.c, this.a);
-        return new THREE.Vector3().crossVectors(ab, ac).normalize();
-    }
-
-    get centroid(): THREE.Vector3 {
-        return new THREE.Vector3(
-            (this.a.x + this.b.x + this.c.x) / 3,
-            (this.a.y + this.b.y + this.c.y) / 3,
-            (this.a.z + this.b.z + this.c.z) / 3
-        );
-    }
-
-    get area(): number {
-        const ab = new THREE.Vector3().subVectors(this.b, this.a);
-        const ac = new THREE.Vector3().subVectors(this.c, this.a);
-        return 0.5 * ab.cross(ac).length();
-    }
-
-    *[Symbol.iterator](): Generator<THREE.Vector3> {
-        yield this.a;
-        yield this.b;
-        yield this.c;
-    }
-}
+import { Face } from "@/lib/nodes/structure";
 
 export function getPoint(geometry: THREE.BufferGeometry, index: number): THREE.Vector3 {
     const positionAttribute = geometry.getAttribute('position');
@@ -160,22 +131,7 @@ export function* cycle<T>(value: Iterable<T>): Generator<T> {while (true) {
     }
 }
 
-/**
- * Accepts an arbitrary input, if the input is iterable, it returns the iterable,
- * otherwise it returns a generator that yields the value.
- *
- * @param value
- */
-export function* makeIterable<T>(value: T): Iterable<T> {
-    // @ts-ignore
-    if (typeof value === 'string' || typeof value[Symbol.iterator] === 'function') {
-        yield* value as Iterable<T>;
-    } else {
-        yield value;
-    }
-}
-
-export function* makeVariable<T>(value: Variable<T>, length: number): Generator<T> {
+export function* makeSpan<T>(value: Span<T>, length: number): Generator<T> {
     if (Array.isArray(value)) {
         if (value.length !== length) {
             throw new Error(`Expected array of length ${length}, but got ${value.length}`);
@@ -200,4 +156,24 @@ export function mulberry32(seed?: number) {
         t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
         return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     }
+}
+
+export function roundProbabilistic(rng: () => number, value: number): number {
+    const floor = Math.floor(value)
+    const ceil = Math.ceil(value)
+    if (floor === ceil) {
+        return floor
+    }
+    const ceilProb = value - floor
+    return rng() > ceilProb ? ceil : floor
+}
+
+export function randomBarycentricCoordinates(rng: () => number): THREE.Vector3 {
+    let u = rng()
+    let v = rng()
+    if (u + v > 1) {
+        u = 1 - u
+        v = 1 - v
+    }
+    return new THREE.Vector3(u, v, 1 - u - v)
 }
