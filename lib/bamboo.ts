@@ -10,14 +10,18 @@ import {
 import { registerCanvasResizeListener, registerMouseMoveListener } from "@/lib/threeHelper";
 import gsap from "gsap";
 import {
+    drawCurves,
+    drawGeometry, drawLines, drawPoints, mulberry32,
     randomColor,
     walkFaces,
 } from "@/lib/nodes/utils";
 // @ts-ignore
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { distributePointsOnFaces } from "@/lib/nodes/point";
+import { CurveLine } from "@/lib/nodes/curves";
+import { randomValue } from "@/lib/nodes/operations";
 
-export function onCanvasLoad(canvas: HTMLCanvasElement) {
+export function onCanvasLoad(canvas: HTMLCanvasElement, properties: BambooProps) {
     // META INFO
 
     const aspRatio = canvas.clientWidth / canvas.clientHeight
@@ -66,34 +70,26 @@ export function onCanvasLoad(canvas: HTMLCanvasElement) {
     //     scene.add(mesh);
     // }
 
-    const boxGeometry = new THREE.TorusKnotGeometry(1);
-    // const distributed = distributePointsOnFaces("Random", { geometry: boxGeometry, selection: true, density: 10 });
-    const distributed = distributePointsOnFaces("Poisson Disk", {
-        geometry: boxGeometry, selection: true, densityMax: 1000, densityFactor: 1, distanceMin: 0.1
-    });
+    const rng = mulberry32()
 
-    for (const [p1, p2, p3] of walkFaces(boxGeometry)) {
-        // construct a mesh for points p1 p2 p3
-        const geometry = new THREE.BufferGeometry();
-        const vertices = new Float32Array([
-            p1.x, p1.y, p1.z,
-            p2.x, p2.y, p2.z,
-            p3.x, p3.y, p3.z,
-        ]);
-        geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
-        const material = new THREE.MeshBasicMaterial({ color: randomColor() * 0.001 });
-        const mesh = new THREE.Mesh(geometry, material);
-        scene.add(mesh)
-    }
+    const basePlane = new THREE.PlaneGeometry(3, 3);
+    basePlane.rotateX(-Math.PI / 2)
 
-    for (const point of distributed) {
-        const geometry = new THREE.SphereGeometry(0.05, 32, 32);
-        const material = new THREE.MeshBasicMaterial({ color: randomColor() });
-        const mesh = new THREE.Mesh(geometry, material);
-        mesh.position.set(point.x, point.y, point.z);
-        scene.add(mesh);
-    }
+    const seeds = distributePointsOnFaces("Poisson Disk", {
+        geometry: basePlane, selection: true, densityMax: 10, densityFactor: 1, distanceMin: 0.2
+    })
 
+    const bambooStems = seeds
+        .map((point) => CurveLine.fromDirection(point, new THREE.Vector3(0, 1, 0),
+            randomValue("Float", rng, properties.bamboo.minHeight, properties.bamboo.maxHeight)))
+        .map((curve) => curve.resampleByLength(
+            randomValue("Float", rng, properties.knot.minHeight, properties.knot.maxHeight)))
+        .map((curve) => curve.toGeometry())
+
+    drawGeometry(basePlane, scene)
+    drawPoints(seeds, scene)
+    drawLines(bambooStems, scene)
+    // drawCurves(bambooStems, scene)
 
     const pointLight = new THREE.PointLight(0xffffff, 30)
     pointLight.position.set(-2, 2, 2)

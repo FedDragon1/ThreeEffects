@@ -1,4 +1,5 @@
 import {
+    createDistributorFor,
     enumerate,
     makeSpan,
     mulberry32,
@@ -10,11 +11,6 @@ import {
 import * as THREE from "three";
 import { Vector3 } from "three";
 import { Face, KDTree3D } from "@/lib/nodes/structure";
-
-type PointDistributionMethod = keyof typeof pointDistrubutors;
-type DistributorFn<M extends PointDistributionMethod> = typeof pointDistrubutors[M]
-type ArgsFor<M extends PointDistributionMethod> = Parameters<DistributorFn<M>>
-type ResultFor<M extends PointDistributionMethod> = ReturnType<DistributorFn<M>>
 
 function sampleOnFace(face: Face, calculatedDensity: number, rng: () => number): [THREE.Vector3[], THREE.Vector3[]] {
     const pointAmount = roundProbabilistic(rng, calculatedDensity * face.area)
@@ -161,14 +157,7 @@ function distributePointsOnFacesRandom(params: {
     return points
 }
 
-const pointDistrubutors = {
+export const distributePointsOnFaces = createDistributorFor({
     "Poisson Disk": distributePointsOnFacesPoissonDisk,
     "Random": distributePointsOnFacesRandom,
-} as const
-
-export function distributePointsOnFaces<M extends PointDistributionMethod>(method: M, ...args: [...ArgsFor<M>]): ResultFor<M> {
-    const fn = pointDistrubutors[method] as unknown as (...a: ArgsFor<M>) => ResultFor<M>;
-    return fn(...args) as ResultFor<M>;
-}
-
-
+})

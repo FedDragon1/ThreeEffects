@@ -1,15 +1,11 @@
 "use client"
 
 import { FC, useCallback, useEffect, useState } from "react";
-import * as THREE from "three"
-import { enumerate, walkEdges, walkPoints } from "@/lib/nodes/utils";
 import { onCanvasLoad } from "@/lib/bamboo";
 
-interface BambooProps {
 
-}
 
-const Bamboo: FC<BambooProps> = () => {
+const Bamboo: FC<BambooProps> = (props) => {
     const [canvas, setCanvas] = useState<HTMLCanvasElement>()
     const canvasCallback = useCallback((node: HTMLCanvasElement | null) => {
         if (node) {
@@ -21,7 +17,7 @@ const Bamboo: FC<BambooProps> = () => {
         if (!canvas) {
             return
         }
-        onCanvasLoad(canvas)
+        onCanvasLoad(canvas, props)
     }, [canvas]);
 
     return (

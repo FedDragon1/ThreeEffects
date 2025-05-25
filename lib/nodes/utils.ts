@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { Face } from "@/lib/nodes/structure";
+import { Curve } from "@/lib/nodes/curves";
 
 export function getPoint(geometry: THREE.BufferGeometry, index: number): THREE.Vector3 {
     const positionAttribute = geometry.getAttribute('position');
@@ -176,4 +177,69 @@ export function randomBarycentricCoordinates(rng: () => number): THREE.Vector3 {
         v = 1 - v
     }
     return new THREE.Vector3(u, v, 1 - u - v)
+}
+
+export function drawGeometry(geometry: THREE.BufferGeometry, scene: THREE.Scene) {
+    for (const [p1, p2, p3] of walkFaces(geometry)) {
+        // construct a mesh for points p1 p2 p3
+        const geometry = new THREE.BufferGeometry();
+        const vertices = new Float32Array([
+            p1.x, p1.y, p1.z,
+            p2.x, p2.y, p2.z,
+            p3.x, p3.y, p3.z,
+        ]);
+        geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+        const [h, s, l] = randomColorHsl()
+        const color = hslToHex(h, s, l * 0.1)
+        const material = new THREE.MeshBasicMaterial({ color });
+        const mesh = new THREE.Mesh(geometry, material);
+        scene.add(mesh)
+    }
+}
+
+export function drawPoints(points: THREE.Vector3[], scene: THREE.Scene) {
+    for (const point of points) {
+        const geometry = new THREE.SphereGeometry(0.01, 32, 32);
+        const material = new THREE.MeshBasicMaterial({ color: randomColor() });
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.position.set(point.x, point.y, point.z);
+        scene.add(mesh);
+    }
+}
+
+export function drawCurves(curves: Curve[], scene: THREE.Scene) {
+    drawLines(curves.map((curve) => curve.toGeometry()), scene)
+}
+
+export function drawLines(lines: THREE.BufferGeometry[], scene: THREE.Scene) {
+    for (const geometry of lines) {
+        const material = new THREE.LineBasicMaterial({ color: randomColor() });
+        const line = new THREE.Line(geometry, material);
+        scene.add(line);
+    }
+}
+
+export function randomColorHsl(): [number, number, number] {
+    const h = Math.floor(Math.random() * 360);
+    const s = Math.floor(Math.random() * 100);
+    const l = Math.floor(Math.random() * 100);
+    return [h, s, l];
+}
+
+export function hslToHex(h: number, s: number, l: number) {
+    l /= 100;
+    const a = s * Math.min(l, 1 - l) / 100;
+    const f = (n: number) => {
+        const k = (n + h / 30) % 12;
+        const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+        return Math.round(255 * color).toString(16).padStart(2, '0');   // convert to Hex and prefix "0" if needed
+    };
+    return `#${f(0)}${f(8)}${f(4)}`;
+}
+
+export function createDistributorFor<T extends ImplRegistry>(registry: T): ImplDispatcher<T> {
+    return (method, ...args) => {
+        const fn = registry[method] as FunctionFor<typeof registry, typeof method>
+        return fn(...args) as ResultFor<typeof registry, typeof method>;
+    }
 }

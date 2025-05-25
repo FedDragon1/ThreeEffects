@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { BufferGeometry, Vector3 } from 'three';
 import { zip } from "@/lib/nodes/utils";
 
-abstract class Curve {
+export abstract class Curve {
     abstract getLength(): number;
 
     abstract getPoint(t: number): THREE.Vector3;
@@ -14,6 +14,11 @@ abstract class Curve {
     abstract toGeometry(): THREE.BufferGeometry
 
     abstract resample(count: number): Polyline;
+
+    resampleByLength(length: number): Polyline {
+        const count = Math.floor(this.getLength() / length);
+        return this.resample(count);
+    }
 }
 
 class Polyline extends Curve {
