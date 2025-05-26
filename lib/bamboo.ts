@@ -13,13 +13,15 @@ import {
     drawCurves,
     drawGeometry, drawLines, drawPoints, mulberry32,
     randomColor,
-    walkFaces,
+    walkFaces, walkPoints, withAttribute,
 } from "@/lib/nodes/utils";
 // @ts-ignore
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { distributePointsOnFaces } from "@/lib/nodes/point";
-import { CurveLine } from "@/lib/nodes/curves";
+import { CurveCircle, CurveLine, Polyline } from "@/lib/nodes/curves";
 import { randomValue } from "@/lib/nodes/operations";
+import { geometryToCurve, splitEdges } from "@/lib/nodes/mesh";
+import { CircleGeometry } from "three";
 
 export function onCanvasLoad(canvas: HTMLCanvasElement, properties: BambooProps) {
     // META INFO
@@ -71,27 +73,81 @@ export function onCanvasLoad(canvas: HTMLCanvasElement, properties: BambooProps)
     // }
 
     const rng = mulberry32()
+    const knotVaryingWidthFn = (x: number) => -((12 * x) ** 4) + 0.5
+    const knotConstantWidth = knotVaryingWidthFn(-0.05)
+    const knotWidthFn = (x: number) => {
+        if (x < 0 || x > 1) {
+            throw new Error("knotWidthFn expects x to be in [0, 1]");
+        }
+        if (x < 0.1) {
+            return knotVaryingWidthFn(x - 0.05)
+        }
+        if (x < 0.9) {
+            return knotConstantWidth
+        }
+        return knotVaryingWidthFn(x - 0.95)
+    }
 
     const basePlane = new THREE.PlaneGeometry(3, 3);
     basePlane.rotateX(-Math.PI / 2)
 
-    const seeds = distributePointsOnFaces("Poisson Disk", {
+    const seeds = distributePointsOnFaces("poisson disk", {
         geometry: basePlane, selection: true, densityMax: 10, densityFactor: 1, distanceMin: 0.2
     })
 
-    const bambooStems = seeds
+    const bambooStemSeeds = seeds
         .map((point) => CurveLine.fromDirection(point, new THREE.Vector3(0, 1, 0),
-            randomValue("Float", rng, properties.bamboo.minHeight, properties.bamboo.maxHeight)))
+            randomValue("float", rng, properties.bamboo.minHeight, properties.bamboo.maxHeight)))
         .map((curve) => curve.resampleByLength(
-            randomValue("Float", rng, properties.knot.minHeight, properties.knot.maxHeight)))
-        .map((curve) => curve.toGeometry())
+            randomValue("float", rng, properties.knot.minHeight, properties.knot.maxHeight)))
+        .map((curve) => curve.toGeometry()) // TODO wind
+        .map((geometry) => splitEdges("scale", geometry, "line", 0.05))
+
+    const bambooStems = bambooStemSeeds.map((stem) => stem.flatMap(geometryToCurve))
+    const resampledStems = bambooStems
+        .map((stem) => stem.map((curve, knotIndex, knots) => {
+            const n = 10
+
+            // sample more on the endpoints
+            const resampledPoints = []
+            const radii = []
+            for (let i = 0; i <= n; i++) {
+                const alpha = i / n
+                const t = alpha < 0.45 ? 0.3 * alpha : alpha < 0.55 ? 7.3 * (alpha - 0.45) + 0.135 : 0.3 * (alpha - 1) + 1
+                const h = (knotIndex + alpha) / knots.length
+                const r = knotWidthFn(t) * 0.1 * (1 - 0.5 * h)
+                resampledPoints.push(curve.getPoint(t))
+                radii.push(r)
+            }
+            return new Polyline(resampledPoints, false, radii)
+        }))
+
+    const stemCircles = resampledStems.map((stem) =>
+        stem.flatMap((geometry) => {
+            return Array.from(walkPoints(geometry.toGeometry()).map((point, i) => {
+                return new CurveCircle(geometry.radius[i], 12).toGeometry().rotateX(-Math.PI / 2).translate(point.x, point.y, point.z)
+            }))
+        }))
+
+    const stemMeshes = resampledStems.map((stem) =>
+        stem.map((curve) => curve.toMeshGeometryWithRadius((r) => new CurveCircle(r, 8), 8)))
 
     drawGeometry(basePlane, scene)
     drawPoints(seeds, scene)
-    drawLines(bambooStems, scene)
-    // drawCurves(bambooStems, scene)
+    drawLines(bambooStemSeeds.flat(), scene)
+    drawCurves(resampledStems.flat(), scene)
+    drawLines(stemCircles.flat(), scene)
 
-    const pointLight = new THREE.PointLight(0xffffff, 30)
+    stemMeshes.flat(2).map((geometry) => {
+        const material = new THREE.MeshPhongMaterial({
+            color: 0x666666, // brown color
+            side: THREE.DoubleSide
+        })
+        const mesh = new THREE.Mesh(geometry, material)
+        scene.add(mesh)
+    })
+
+    const pointLight = new THREE.PointLight(0xffffff, 5)
     pointLight.position.set(-2, 2, 2)
     scene.add(pointLight)
 

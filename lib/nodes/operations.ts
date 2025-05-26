@@ -35,8 +35,8 @@ function randomMinMaxVector(rng: () => number, min: number, max: number) {
 }
 
 export const randomValue = createDistributorFor({
-    "Float": randomMinMaxFloat,
-    "Int": randomMinMaxInt,
-    "Boolean": randomMinMaxBoolean,
-    "Vector": randomMinMaxVector,
+    "float": randomMinMaxFloat,
+    "int": randomMinMaxInt,
+    "boolean": randomMinMaxBoolean,
+    "vector": randomMinMaxVector,
 })

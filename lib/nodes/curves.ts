@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { BufferGeometry, Vector3 } from 'three';
-import { zip } from "@/lib/nodes/utils";
+import { enumerate, makeSpan, walkPoints, zip } from "@/lib/nodes/utils";
 
 export abstract class Curve {
     abstract getLength(): number;
@@ -21,10 +21,11 @@ export abstract class Curve {
     }
 }
 
-class Polyline extends Curve {
+export class Polyline extends Curve {
     prefixVertices: number[]
+    radius: number[]
 
-    constructor(public points: THREE.Vector3[], public enclose: boolean = false) {
+    constructor(public points: THREE.Vector3[], public enclose: boolean = false, radius: Span<number> = 1) {
         super()
 
         if (points.length < 2) {
@@ -40,6 +41,7 @@ class Polyline extends Curve {
             prefixT.push(prefixT[i] + eachT[i])
         }
         this.prefixVertices = prefixT
+        this.radius = Array.from(makeSpan(radius, this.points.length))
     }
 
     get segments() {
@@ -51,11 +53,11 @@ class Polyline extends Curve {
 
     /**
      * Given 0 <= t <= 1, return the segment of the polyline that contains t,
-     * and the t value of the segment.
+     * and the t value of the segment. Additionally, return the indices of the points.
      *
      * @param t
      */
-    getSegmentByT(t: number): [THREE.Vector3, THREE.Vector3, number] {
+    getSegmentByT(t: number): [THREE.Vector3, THREE.Vector3, number, number, number] {
         if (t < 0 || t > 1) {
             throw new Error("t must be between 0 and 1");
         }
@@ -72,10 +74,13 @@ class Polyline extends Curve {
         }
 
         l--;
+        const r = (l + 1) % this.points.length;
         return [
             this.points[l],
-            this.points[(l + 1) % this.points.length],  // mod should only trigger when the polyline is closed
-            (t - this.prefixVertices[l]) / (this.prefixVertices[l + 1] - this.prefixVertices[l])
+            this.points[r],  // mod should only trigger when the polyline is closed
+            (t - this.prefixVertices[l]) / (this.prefixVertices[l + 1] - this.prefixVertices[l]),
+            l,
+            r
         ]
     }
 
@@ -90,6 +95,13 @@ class Polyline extends Curve {
     getPoint(t: number): THREE.Vector3 {
         const [p1, p2, t2] = this.getSegmentByT(t);
         return new THREE.Vector3().lerpVectors(p1, p2, t2);
+    }
+
+    getPointWithRadius(t: number): [THREE.Vector3, number] {
+        const [p1, p2, t2, l, r] = this.getSegmentByT(t);
+        const point = new THREE.Vector3().lerpVectors(p1, p2, t2);
+        const radius = this.radius[l] * (1 - t2) + this.radius[r] * t2;
+        return [point, radius];
     }
 
     getTangent(t: number): THREE.Vector3 {
@@ -130,6 +142,44 @@ class Polyline extends Curve {
         geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
         geometry.setIndex(new THREE.BufferAttribute(indices, 1));
         return geometry;
+    }
+
+    toMeshGeometryWithRadius(profileCurve: (radius: number) => Curve, curveResolution: number): BufferGeometry {
+        // for each point in the polyline, create a profile curve with the radius at that point
+        // and then create a tube geometry from the profile curves
+        // for each two consecutive profile curves, create indices that connect them in triangles
+        // connect a[i] to b[i], b[i] to a[(i + 1) % a.length], a[i] to a[(i + 1) % a.length]
+        // then connect b[i] to b[(i + 1) % b.length], b[(i + 1) % b.length] to a[(i + 1) % a.length], a[(i + 1) % a.length] to b[i]
+        const vertices = new Float32Array(this.points.length * curveResolution * 3);
+        for (const [i, [point, radius]] of enumerate(zip(this.points, this.radius))) {
+            const profileCurveInstance = profileCurve(radius).resample(curveResolution);
+            const profileGeometry = profileCurveInstance.toGeometry();
+            profileGeometry.rotateX(-Math.PI / 2); // rotate the profile curve to align with the polyline
+            profileGeometry.translate(point.x, point.y, point.z);
+
+            for (const [j, position] of enumerate(walkPoints(profileGeometry))) {
+                vertices.set([position.x, position.y, position.z], (i * curveResolution + j) * 3);
+            }
+        }
+
+        const consecutiveProfileCurves = this.points.length - (this.enclose ? 0 : 1);
+        const indices = new Uint16Array(consecutiveProfileCurves * curveResolution * 6);
+        for (let i = 0; i < consecutiveProfileCurves; i++) {
+            for (let j = 0; j < curveResolution; j++) {
+                const a1 = i * curveResolution + j;
+                const a2 = ((i + 1) % this.points.length) * curveResolution + j;
+                const b1 = i * curveResolution + (j + 1) % curveResolution;
+                const b2 = ((i + 1) % this.points.length) * curveResolution + (j + 1) % curveResolution;
+
+                indices.set([a1, b1, a2], (i * curveResolution + j) * 6);
+                indices.set([b1, b2, a2], (i * curveResolution + j) * 6 + 3);
+            }
+        }
+
+        const geometry = new BufferGeometry();
+        geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+        geometry.setIndex(new THREE.BufferAttribute(indices, 1));
+        return geometry
     }
 }
 

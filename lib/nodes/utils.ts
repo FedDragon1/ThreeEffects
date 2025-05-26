@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { Face } from "@/lib/nodes/structure";
 import { Curve } from "@/lib/nodes/curves";
+import attr = gsap.plugins.attr;
 
 export function getPoint(geometry: THREE.BufferGeometry, index: number): THREE.Vector3 {
     const positionAttribute = geometry.getAttribute('position');
@@ -145,6 +146,10 @@ export function* makeSpan<T>(value: Span<T>, length: number): Generator<T> {
     }
 }
 
+export function makeSpanEager<T>(value: Span<T>, length: number): T[] {
+    return Array.from(makeSpan(value, length));
+}
+
 export function randomColor() {
     return Math.floor(Math.random() * 16777215);
 }
@@ -242,4 +247,41 @@ export function createDistributorFor<T extends ImplRegistry>(registry: T): ImplD
         const fn = registry[method] as FunctionFor<typeof registry, typeof method>
         return fn(...args) as ResultFor<typeof registry, typeof method>;
     }
+}
+
+// PROXY FOR ATTRIBUTES
+
+const proxyRegistry = new WeakMap<object, Map<string, any>>()
+const attributeTarget = Symbol("[[AttributeTarget]]")
+
+export function withAttribute<T extends object, A extends string, R>(object: T, attribute: A, value: R): Prettify<T & Record<A, R>> {
+    const existingMeta = proxyRegistry.get(object)
+    const target = existingMeta ? (object as any)[attributeTarget] : object
+    const attributes = new Map<string, any>(existingMeta?.entries())
+    attributes.set(attribute, value);
+
+    const proxy = new Proxy(target, {
+        get(t, prop, receiver) {
+            if (typeof prop === "string" && attributes.has(prop)) {
+                return attributes.get(prop);
+            }
+            return Reflect.get(t, prop, receiver);
+        },
+        set(t, prop, newValue, receiver) {
+            if (typeof prop === "string" && attributes.has(prop)) {
+                attributes.set(prop, newValue);
+                return true;
+            }
+            return Reflect.set(t, prop, newValue, receiver);
+        }
+    }) as Prettify<T & Record<A, R>>
+
+    proxyRegistry.set(proxy, attributes)
+    Object.defineProperty(proxy, attributeTarget, {
+        value: target,
+        enumerable: false,
+        configurable: false
+    })
+
+    return proxy
 }

@@ -158,6 +158,6 @@ function distributePointsOnFacesRandom(params: {
 }
 
 export const distributePointsOnFaces = createDistributorFor({
-    "Poisson Disk": distributePointsOnFacesPoissonDisk,
-    "Random": distributePointsOnFacesRandom,
+    "poisson disk": distributePointsOnFacesPoissonDisk,
+    "random": distributePointsOnFacesRandom,
 })
