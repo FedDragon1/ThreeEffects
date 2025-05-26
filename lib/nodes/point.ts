@@ -161,3 +161,16 @@ export const distributePointsOnFaces = createDistributorFor({
     "poisson disk": distributePointsOnFacesPoissonDisk,
     "random": distributePointsOnFacesRandom,
 })
+
+export function instanceOnPoints(points: THREE.Vector3[],
+                                 instanceFactory: (point: THREE.Vector3) => THREE.BufferGeometry,
+                                 selection: Span<boolean> = true) {
+    const selectionG = makeSpan(selection, points.length);
+    const geometries: THREE.BufferGeometry[] = [];
+    for (const [point, select] of zip(points, selectionG)) {
+        if (select) {
+            geometries.push(instanceFactory(point))
+        }
+    }
+    return geometries
+}

@@ -17,7 +17,7 @@ import {
 } from "@/lib/nodes/utils";
 // @ts-ignore
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
-import { distributePointsOnFaces } from "@/lib/nodes/point";
+import { distributePointsOnFaces, instanceOnPoints } from "@/lib/nodes/point";
 import { CurveCircle, CurveLine, Polyline } from "@/lib/nodes/curves";
 import { randomValue } from "@/lib/nodes/operations";
 import { geometryToCurve, splitEdges } from "@/lib/nodes/mesh";
@@ -132,16 +132,65 @@ export function onCanvasLoad(canvas: HTMLCanvasElement, properties: BambooProps)
     const stemMeshes = resampledStems.map((stem) =>
         stem.map((curve) => curve.toMeshGeometryWithRadius((r) => new CurveCircle(r, 8), 8)))
 
-    drawGeometry(basePlane, scene)
-    drawPoints(seeds, scene)
-    drawLines(bambooStemSeeds.flat(), scene)
-    drawCurves(resampledStems.flat(), scene)
-    drawLines(stemCircles.flat(), scene)
+    // drawGeometry(basePlane, scene)
+    // drawPoints(seeds, scene)
+    // drawLines(bambooStemSeeds.flat(), scene)
+    // drawCurves(resampledStems.flat(), scene)
+    // drawLines(stemCircles.flat(), scene)
 
     stemMeshes.flat(2).map((geometry) => {
-        const material = new THREE.MeshPhongMaterial({
+        const material = new THREE.MeshStandardMaterial({
             color: 0x666666, // brown color
-            side: THREE.DoubleSide
+            side: THREE.DoubleSide,
+            opacity: 0.5,
+            transparent: true
+        })
+        const mesh = new THREE.Mesh(geometry, material)
+        scene.add(mesh)
+    })
+
+    // leaf stems
+    // give some extra spots for potential stems
+    const leafSeeds = resampledStems.flat().flatMap((knotCurve) => {
+        const n = 5
+        const points = []
+        for (let i = 0; i <= n; i++) {
+            // allow 0.1 to 0.3
+            const t = 0.2 * i / n + 0.1
+            points.push(knotCurve.getPoint(t))
+        }
+        return points
+    })
+
+    const leafStems = instanceOnPoints(leafSeeds, (point) => {
+        const line = CurveLine.fromDirection(point, new THREE.Vector3(0, 1, 0),
+            randomValue("float", rng, 0.1, 0.3))
+        const n = 10
+        const locals = []
+        const radii = []
+        const basePoint = line.getPoint(0)
+        for (let i = 0; i <= n; i++) {
+            // sample more on the root because of greater curvature
+            const t = (4 ** (i / n) - 1) / 3;
+            const point = line.getPoint(t)
+            const offsetX = (5 ** t - 1) / 20;
+            locals.push(new THREE.Vector3(point.x - basePoint.x + offsetX, point.y - basePoint.y, point.z - basePoint.z))
+            radii.push(((t - 0.75) ** 2 + 0.4375) * 0.01)
+        }
+        const geometry = new Polyline(locals, false, radii)
+            .toMeshGeometryWithRadius((radius) => new CurveCircle(radius), 5)
+        const yRotation = new THREE.Matrix4().makeRotationY(randomValue("float", rng, -Math.PI, Math.PI))
+        const zRotation = new THREE.Matrix4().makeRotationZ(randomValue("float", rng, -0.5, 0))
+        geometry.applyMatrix4(yRotation.multiply(zRotation)).translate(basePoint.x, basePoint.y, basePoint.z)
+        return geometry
+    }, leafSeeds.map(() => rng() < 0.268))
+
+    leafStems.forEach((geometry) => {
+        const material = new THREE.MeshStandardMaterial({
+            color: 0x228B22, // green color
+            side: THREE.DoubleSide,
+            opacity: 0.5,
+            transparent: true
         })
         const mesh = new THREE.Mesh(geometry, material)
         scene.add(mesh)
