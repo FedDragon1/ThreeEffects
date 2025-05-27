@@ -17,7 +17,7 @@ export abstract class Curve {
 
     resampleByLength(length: number): Polyline {
         const count = Math.floor(this.getLength() / length);
-        return this.resample(count);
+        return this.resample(count + 1);
     }
 }
 
@@ -116,8 +116,8 @@ export class Polyline extends Curve {
 
     resample(count: number): Polyline {
         const points: THREE.Vector3[] = [];
-        for (let i = 0; i <= count; i++) {
-            const t = i / count;
+        for (let i = 0; i < count; i++) {
+            const t = i / (count - 1);
             points.push(this.getPoint(t));
         }
         return new Polyline(points, this.enclose);
@@ -150,6 +150,7 @@ export class Polyline extends Curve {
         // for each two consecutive profile curves, create indices that connect them in triangles
         // connect a[i] to b[i], b[i] to a[(i + 1) % a.length], a[i] to a[(i + 1) % a.length]
         // then connect b[i] to b[(i + 1) % b.length], b[(i + 1) % b.length] to a[(i + 1) % a.length], a[(i + 1) % a.length] to b[i]
+
         const vertices = new Float32Array(this.points.length * curveResolution * 3);
         for (const [i, [point, radius]] of enumerate(zip(this.points, this.radius))) {
             const profileCurveInstance = profileCurve(radius).resample(curveResolution);
@@ -219,8 +220,8 @@ export class CurveLine extends Curve {
 
     resample(count: number): Polyline {
         const points: THREE.Vector3[] = [];
-        for (let i = 0; i <= count; i++) {
-            const t = i / count;
+        for (let i = 0; i < count; i++) {
+            const t = i / (count - 1);
             points.push(this.getPoint(t));
         }
         return new Polyline(points);

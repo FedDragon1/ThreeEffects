@@ -16,6 +16,8 @@ type Prettify<T> = {
     [K in keyof T]: T[K];
 } & {};
 
+type Attributed<T, K> = Prettify<T & K>
+
 interface Clipping {
     xMin: number,
     xMax: number,

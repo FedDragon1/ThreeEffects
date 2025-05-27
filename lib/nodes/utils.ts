@@ -128,8 +128,15 @@ export function* repeat<T>(value: T, count: number = Infinity): Generator<T> {
     }
 }
 
-export function* cycle<T>(value: Iterable<T>): Generator<T> {while (true) {
+export function* cycle<T>(value: Iterable<T>): Generator<T> {
+    while (true) {
         yield *value
+    }
+}
+
+export function* chain<E>(...values: Iterable<E>[]): Generator<E> {
+    for (const value of values) {
+        yield *value;
     }
 }
 
@@ -202,9 +209,9 @@ export function drawGeometry(geometry: THREE.BufferGeometry, scene: THREE.Scene)
     }
 }
 
-export function drawPoints(points: THREE.Vector3[], scene: THREE.Scene) {
+export function drawPoints(points: THREE.Vector3[], scene: THREE.Scene, radius: number = 0.01) {
     for (const point of points) {
-        const geometry = new THREE.SphereGeometry(0.01, 32, 32);
+        const geometry = new THREE.SphereGeometry(radius, 32, 32);
         const material = new THREE.MeshBasicMaterial({ color: randomColor() });
         const mesh = new THREE.Mesh(geometry, material);
         mesh.position.set(point.x, point.y, point.z);
@@ -254,11 +261,16 @@ export function createDistributorFor<T extends ImplRegistry>(registry: T): ImplD
 const proxyRegistry = new WeakMap<object, Map<string, any>>()
 const attributeTarget = Symbol("[[AttributeTarget]]")
 
-export function withAttribute<T extends object, A extends string, R>(object: T, attribute: A, value: R): Prettify<T & Record<A, R>> {
+export function withAttribute<T extends object, V extends Record<string, any>>(object: T, attrs: V): Attributed<T, V> {
     const existingMeta = proxyRegistry.get(object)
     const target = existingMeta ? (object as any)[attributeTarget] : object
     const attributes = new Map<string, any>(existingMeta?.entries())
-    attributes.set(attribute, value);
+    for (const [key, value] of Object.entries(attrs)) {
+        if (attributes.has(key)) {
+            throw new Error(`Attribute ${key} already exists on the target object`);
+        }
+        attributes.set(key, value);
+    }
 
     const proxy = new Proxy(target, {
         get(t, prop, receiver) {
@@ -274,7 +286,7 @@ export function withAttribute<T extends object, A extends string, R>(object: T, 
             }
             return Reflect.set(t, prop, newValue, receiver);
         }
-    }) as Prettify<T & Record<A, R>>
+    })
 
     proxyRegistry.set(proxy, attributes)
     Object.defineProperty(proxy, attributeTarget, {
