@@ -144,7 +144,7 @@ export class Polyline extends Curve {
         return geometry;
     }
 
-    toMeshGeometryWithRadius(profileCurve: (radius: number) => Curve, curveResolution: number): BufferGeometry {
+    toMeshGeometryWithRadius(profileCurve: (radius: number) => Curve, curveResolution: number, alignTangent: boolean = true): BufferGeometry {
         // for each point in the polyline, create a profile curve with the radius at that point
         // and then create a tube geometry from the profile curves
         // for each two consecutive profile curves, create indices that connect them in triangles
@@ -155,7 +155,14 @@ export class Polyline extends Curve {
         for (const [i, [point, radius]] of enumerate(zip(this.points, this.radius))) {
             const profileCurveInstance = profileCurve(radius).resample(curveResolution);
             const profileGeometry = profileCurveInstance.toGeometry();
-            profileGeometry.rotateX(-Math.PI / 2); // rotate the profile curve to align with the polyline
+            if (alignTangent) {
+                const t = i / (this.points.length - 1),
+                    tangent = this.getTangent(t).normalize(),
+                    axis = new THREE.Vector3(0, 0, 1).cross(tangent).normalize(),
+                    angle = Math.acos(new THREE.Vector3(0, 0, 1).dot(tangent)),
+                    m = new THREE.Matrix4().makeRotationAxis(axis, angle)
+                profileGeometry.applyMatrix4(m); // rotate the profile curve to align with the polyline
+            }
             profileGeometry.translate(point.x, point.y, point.z);
 
             for (const [j, position] of enumerate(walkPoints(profileGeometry))) {

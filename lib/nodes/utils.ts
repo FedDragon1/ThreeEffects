@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { Face } from "@/lib/nodes/structure";
 import { Curve } from "@/lib/nodes/curves";
-import attr = gsap.plugins.attr;
 
 export function getPoint(geometry: THREE.BufferGeometry, index: number): THREE.Vector3 {
     const positionAttribute = geometry.getAttribute('position');
@@ -296,4 +295,24 @@ export function withAttribute<T extends object, V extends Record<string, any>>(o
     })
 
     return proxy
+}
+
+export function add(x: THREE.Vector3, y: THREE.Vector3): THREE.Vector3 {
+    return new THREE.Vector3(x.x + y.x, x.y + y.y, x.z + y.z);
+}
+
+export function sub(x: THREE.Vector3, y: THREE.Vector3): THREE.Vector3 {
+    return new THREE.Vector3(x.x - y.x, x.y - y.y, x.z - y.z);
+}
+
+export function mul(x: THREE.Vector3, y: THREE.Vector3): THREE.Vector3 {
+    return new THREE.Vector3(x.x * y.x, x.y * y.y, x.z * y.z);
+}
+
+export function div(x: THREE.Vector3, y: THREE.Vector3): THREE.Vector3 {
+    return new THREE.Vector3(x.x / y.x, x.y / y.y, x.z / y.z);
+}
+
+export function mulScalar(x: THREE.Vector3, scalar: number): THREE.Vector3 {
+    return new THREE.Vector3(x.x * scalar, x.y * scalar, x.z * scalar);
 }

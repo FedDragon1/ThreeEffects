@@ -20,3 +20,28 @@ interface BambooProps {
         far: number
     }
 }
+
+interface BambooSpecFull {
+    rng: () => number,
+    bamboo: {
+        windSpeed: number,
+        windScale: number,
+    },
+    knots: {
+        uResolution: number,
+        vResolution: number,
+        stemCount: number
+    },
+    stems: {
+        windSpeed: number,
+        windScale: number,
+        uResolution: number,
+        vResolution: number,
+        leafCount: number,
+        secondaryStemChance: number
+    },
+    shader: {
+        near: number,
+        far: number
+    }
+}
