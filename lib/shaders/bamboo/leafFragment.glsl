@@ -90,6 +90,10 @@ float fbm3D(in vec3 p, int octaves, float lacunarity, float gain) {
 }
 
 void main() {
+    if (vZDepth > uZMax) {
+        discard;
+    }
+
     float baseColor = max(1.2 * vUv.y - 0.2, 0.);
     float scale = 1.;
     int detail = 10;

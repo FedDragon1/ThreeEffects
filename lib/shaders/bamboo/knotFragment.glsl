@@ -102,6 +102,10 @@ vec3 rotateY(vec3 v, float angle) {
 }
 
 void main() {
+    if (vZDepth > uZMax) {
+        discard;
+    }
+
     float baseColor = max(exp(-10. * pow((vUv.y - 0.5), 2.)) + 0.1, 0.);
     float scale = 10.;
     int detail = 10;
