@@ -144,7 +144,10 @@ export class Polyline extends Curve {
         return geometry;
     }
 
-    toMeshGeometryWithRadius(profileCurve: (radius: number) => Curve, curveResolution: number, alignTangent: boolean = true): BufferGeometry {
+    toMeshGeometryWithRadius(profileCurve: (radius: number) => Curve,
+                             curveResolution: number,
+                             alignTangent: boolean = true,
+                             withUvAttribute: boolean = false): BufferGeometry {
         // for each point in the polyline, create a profile curve with the radius at that point
         // and then create a tube geometry from the profile curves
         // for each two consecutive profile curves, create indices that connect them in triangles
@@ -152,6 +155,10 @@ export class Polyline extends Curve {
         // then connect b[i] to b[(i + 1) % b.length], b[(i + 1) % b.length] to a[(i + 1) % a.length], a[(i + 1) % a.length] to b[i]
 
         const vertices = new Float32Array(this.points.length * curveResolution * 3);
+        let uv: Float32Array | undefined
+        if (withUvAttribute) {
+            uv = new Float32Array(this.points.length * curveResolution * 2);
+        }
         for (const [i, [point, radius]] of enumerate(zip(this.points, this.radius))) {
             const profileCurveInstance = profileCurve(radius).resample(curveResolution);
             const profileGeometry = profileCurveInstance.toGeometry();
@@ -167,6 +174,11 @@ export class Polyline extends Curve {
 
             for (const [j, position] of enumerate(walkPoints(profileGeometry))) {
                 vertices.set([position.x, position.y, position.z], (i * curveResolution + j) * 3);
+                if (withUvAttribute) {
+                    const u = j / (curveResolution - 1);
+                    const v = i / (this.points.length - 1);
+                    uv!.set([u, v], (i * curveResolution + j) * 2);
+                }
             }
         }
 
@@ -186,6 +198,9 @@ export class Polyline extends Curve {
 
         const geometry = new BufferGeometry();
         geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+        if (withUvAttribute) {
+            geometry.setAttribute('uv', new THREE.BufferAttribute(uv!, 2));
+        }
         geometry.setIndex(new THREE.BufferAttribute(indices, 1));
         return geometry
     }

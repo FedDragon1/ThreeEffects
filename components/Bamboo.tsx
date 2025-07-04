@@ -21,7 +21,9 @@ const Bamboo: FC<BambooProps> = (props) => {
     }, [canvas]);
 
     return (
-        <canvas ref={canvasCallback} className={"w-full aspect-square"}></canvas>
+        <div className={"bg-zinc-200 w-full h-full"}>
+            <canvas ref={canvasCallback} className={"w-full aspect-square"}></canvas>
+        </div>
     )
 }
 

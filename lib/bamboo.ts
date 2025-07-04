@@ -97,19 +97,27 @@ class BambooKnot {
 
     unitGeometry(): THREE.BufferGeometry {
         const polyline = this.unitCurve()
-        return polyline.toMeshGeometryWithRadius(
-            (r) => new CurveCircle(r, 3), this.props.knots.vResolution
-        )
+        const normalBufferAttributesBufferGeometry = polyline.toMeshGeometryWithRadius(
+            (r) => new CurveCircle(r, 3),
+            this.props.knots.vResolution,
+            true,
+            true
+        );
+        normalBufferAttributesBufferGeometry.computeVertexNormals()
+        return normalBufferAttributesBufferGeometry
     }
 
     toMesh(): THREE.Mesh[] {
         const stemMeshes = this.leafStems.flatMap((leafStem) => leafStem.toMesh())
         const knotGeometry = this.unitGeometry()
         const knotMaterial = new KnotMaterial({
-            uOrigin: this.origin
+            uOrigin: this.origin,
+            uZMin: this.props.shader.near,
+            uZMax: this.props.shader.far,
         })
 
         const knotMesh = new THREE.Mesh(knotGeometry, knotMaterial)
+        knotMesh.frustumCulled = false;
         return [knotMesh, ...stemMeshes]
     }
 
@@ -126,7 +134,7 @@ class BambooKnot {
         }
 
         return seeds.map((point) => {
-            const scale = this.props.rng() * 0.1 + 0.05; // random scale between 0.05 and 0.15
+            const scale = this.props.rng() * 0.13 + 0.05; // random scale between 0.05 and 0.15
             return new BambooLeafStem(add(point, this.origin), scale, this.props)
         })
     }
@@ -187,13 +195,6 @@ class BambooLeafStem {
         )
     }
 
-    completeGeometry(): THREE.BufferGeometry {
-        return mergeGeometries([
-            this.unitGeometry(),
-            ...this.children.map((child) => child.unitGeometry())
-        ])
-    }
-
     toMesh(): THREE.Mesh[] {
         const leafMeshes = this.leaves.map((leaf) => leaf.toMesh())
         const stemGeometry = mergeGeometries([
@@ -201,9 +202,12 @@ class BambooLeafStem {
             ...this.children.map((child) => child.unitGeometry())
         ])
         const stemMaterial = new StemMaterial({
-            uOrigin: this.origin
+            uOrigin: this.origin,
+            uZMin: this.props.shader.near,
+            uZMax: this.props.shader.far,
         })
         const stemMesh = new THREE.Mesh(stemGeometry, stemMaterial)
+        stemMesh.frustumCulled = false;
         return [stemMesh, ...leafMeshes]
     }
 
@@ -254,7 +258,7 @@ class BambooLeafStem {
                 offsetV = r * Math.sin(theta),
                 offset = add(mulScalar(n1, offsetU), mulScalar(n2, offsetV));
 
-            const scale = this.props.rng() * 0.06 + 0.02; // random scale between 0.02 and 0.08
+            const scale = this.props.rng() * 0.1 + 0.02;
             const relativeOrigin = add(point, offset)
             stems.push(
                 new BambooLeafStemSecondary(relativeOrigin, this.origin, scale, this.props, tangent, this.rotationY)
@@ -278,7 +282,7 @@ class BambooLeafStemSecondary {
                 public props: BambooSpecFull,
                 public tangent: THREE.Vector3,
                 public rotationY: number) {
-        this.rotation = [(this.props.rng() - 0.5) * 0.4, this.props.rng() - 0.5, (this.props.rng() - 0.5) * 0.4]
+        this.rotation = [this.props.rng() - 0.5, this.props.rng() - 0.5, this.props.rng() - 0.5]
         this.leaves = this.spawnLeaves();
     }
 
@@ -330,13 +334,13 @@ class BambooLeafStemSecondary {
 
                 // we want the leaves sometimes to point not straight down,
                 // so we apply an average between this normal and the tangent
-                const alpha = this.props.rng() * 0.5,
+                const alpha = this.props.rng(),
                     leafTangent = add(mulScalar(normal, alpha), mulScalar(tangent, 1 - alpha))
 
                 leaves.push(new BambooLeaf(
                     add(stemCurve.getPoint(t), this.absOrigin),
                     leafTangent,
-                    this.props.rng() * 0.04 + 0.01,
+                    this.props.rng() * 0.08 + 0.01,
                     this.rotationY,
                     this.props
                 ))
@@ -354,14 +358,14 @@ class BambooLeaf {
                 public scale: number,
                 public rotationY: number,
                 public props: BambooSpecFull) {
-        this.rotation = [(this.props.rng() - 0.5) * 0.4, this.props.rng() - 0.5, (this.props.rng() - 0.5) * 0.4]
+        this.rotation = [(this.props.rng() - 0.5), (this.props.rng() - 0.5) * 2, (this.props.rng() - 0.5)]
     }
 
     static leafRadius(t: number) {
         const a = 0.26794919,
             b = 3.7320508,
             h = (b - a) * 0.5 * (t * t + t) + a
-        return -0.25 * (h + 1 / h) + 1
+        return -0.5 * (h + 1 / h) + 2
     }
 
     unitCurve(): Polyline {
@@ -391,16 +395,21 @@ class BambooLeaf {
                 new THREE.Vector3(-r * Math.sin(totalRot), 0, r * Math.cos(totalRot)),
                 new THREE.Vector3(r * Math.sin(totalRot), 0, -r * Math.cos(totalRot))),
             5,
-            false
+            false,
+            true
         )
     }
 
     toMesh(): THREE.Mesh {
         const geometry = this.unitGeometry()
         const material = new LeafMaterial({
-            uOrigin: this.origin
+            uOrigin: this.origin,
+            uZMin: this.props.shader.near,
+            uZMax: this.props.shader.far,
         })
-        return new THREE.Mesh(geometry, material)
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.frustumCulled = false
+        return mesh
     }
 }
 
@@ -415,7 +424,7 @@ export function onCanvasLoad(canvas: HTMLCanvasElement, properties: BambooProps)
     const renderer = new THREE.WebGLRenderer({
         canvas,
         alpha: true,
-        antialias: false
+        antialias: true
     })
     camera.position.set(0, 0, 4);
 
@@ -696,7 +705,7 @@ export function onCanvasLoad(canvas: HTMLCanvasElement, properties: BambooProps)
             secondaryStemChance: 0.8
         },
         shader: {
-            near: 7,
+            near: 5,
             far: 10
         }
     }
