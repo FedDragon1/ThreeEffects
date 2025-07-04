@@ -8,6 +8,9 @@ interface UniformVariable {
     uOrigin: THREE.Vector3,
     uZMin: number
     uZMax: number
+    uKnotWindSpeed: number,
+    uKnotWindScale: number,
+    uKnotLength: number
 }
 
 const defaultUniforms: UniformVariable = {
@@ -15,6 +18,9 @@ const defaultUniforms: UniformVariable = {
     uOrigin: new THREE.Vector3(0, 0, 0),
     uZMin: 7,
     uZMax: 10,
+    uKnotWindSpeed: 0.1,
+    uKnotWindScale: 4,
+    uKnotLength: 0.2
 }
 
 

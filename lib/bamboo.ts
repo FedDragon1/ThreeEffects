@@ -114,6 +114,9 @@ class BambooKnot {
             uOrigin: this.origin,
             uZMin: this.props.shader.near,
             uZMax: this.props.shader.far,
+            uKnotWindScale: this.props.bamboo.windScale,
+            uKnotWindSpeed: this.props.bamboo.windSpeed,
+            uKnotLength: this.length
         })
 
         const knotMesh = new THREE.Mesh(knotGeometry, knotMaterial)
@@ -135,7 +138,15 @@ class BambooKnot {
 
         return seeds.map((point) => {
             const scale = this.props.rng() * 0.13 + 0.05; // random scale between 0.05 and 0.15
-            return new BambooLeafStem(add(point, this.origin), scale, this.props)
+            return new BambooLeafStem(
+                add(point, this.origin),
+                scale,
+                {
+                    knotOrigin: this.origin,
+                    knotLength: this.length
+                },
+                this.props
+            )
         })
     }
 }
@@ -145,15 +156,9 @@ class BambooLeafStem {
     children: BambooLeafStemSecondary[] = []
     rotationY: number
 
-    /**
-     * A stem with leaves attached on it.
-     *
-     * @param origin
-     * @param scale
-     * @param props
-     */
     constructor(public origin: THREE.Vector3,
                 public scale: number,
+                public knotInfo: { knotOrigin: THREE.Vector3, knotLength: number },
                 public props: BambooSpecFull) {
         this.rotationY = this.props.rng() * Math.PI * 2; // random rotation around Y axis
         this.leaves = this.spawnLeaves();
@@ -205,6 +210,12 @@ class BambooLeafStem {
             uOrigin: this.origin,
             uZMin: this.props.shader.near,
             uZMax: this.props.shader.far,
+            uKnotWindScale: this.props.bamboo.windScale,
+            uKnotWindSpeed: this.props.bamboo.windSpeed,
+            uKnotLength: this.knotInfo.knotLength,
+            uKnotOrigin: this.knotInfo.knotOrigin,
+            uStemWindScale: this.props.stems.windScale,
+            uStemWindSpeed: this.props.stems.windSpeed,
         })
         const stemMesh = new THREE.Mesh(stemGeometry, stemMaterial)
         stemMesh.frustumCulled = false;
@@ -230,6 +241,8 @@ class BambooLeafStem {
                     normal,
                     this.props.rng() * 0.04 + 0.01,
                     this.rotationY,
+                    this.knotInfo,
+                    { stemOrigin: this.origin },
                     this.props
                 ))
             }
@@ -261,7 +274,15 @@ class BambooLeafStem {
             const scale = this.props.rng() * 0.1 + 0.02;
             const relativeOrigin = add(point, offset)
             stems.push(
-                new BambooLeafStemSecondary(relativeOrigin, this.origin, scale, this.props, tangent, this.rotationY)
+                new BambooLeafStemSecondary(
+                    relativeOrigin,
+                    this.origin,
+                    scale,
+                    tangent,
+                    this.rotationY,
+                    this.knotInfo,
+                    this.props,
+                )
             )
         }
 
@@ -279,9 +300,10 @@ class BambooLeafStemSecondary {
     constructor(public origin: THREE.Vector3,
                 public absOrigin: THREE.Vector3,
                 public scale: number,
-                public props: BambooSpecFull,
                 public tangent: THREE.Vector3,
-                public rotationY: number) {
+                public rotationY: number,
+                public knotInfo: { knotOrigin: THREE.Vector3, knotLength: number },
+                public props: BambooSpecFull) {
         this.rotation = [this.props.rng() - 0.5, this.props.rng() - 0.5, this.props.rng() - 0.5]
         this.leaves = this.spawnLeaves();
     }
@@ -342,6 +364,8 @@ class BambooLeafStemSecondary {
                     leafTangent,
                     this.props.rng() * 0.08 + 0.01,
                     this.rotationY,
+                    this.knotInfo,
+                    { stemOrigin: this.absOrigin },
                     this.props
                 ))
             }
@@ -357,6 +381,8 @@ class BambooLeaf {
                 public tangent: THREE.Vector3,
                 public scale: number,
                 public rotationY: number,
+                public knotInfo: { knotOrigin: THREE.Vector3, knotLength: number },
+                public stemInfo: { stemOrigin: THREE.Vector3 },
                 public props: BambooSpecFull) {
         this.rotation = [(this.props.rng() - 0.5), (this.props.rng() - 0.5) * 2, (this.props.rng() - 0.5)]
     }
@@ -406,6 +432,13 @@ class BambooLeaf {
             uOrigin: this.origin,
             uZMin: this.props.shader.near,
             uZMax: this.props.shader.far,
+            uKnotWindScale: this.props.bamboo.windScale,
+            uKnotWindSpeed: this.props.bamboo.windSpeed,
+            uKnotLength: this.knotInfo.knotLength,
+            uKnotOrigin: this.knotInfo.knotOrigin,
+            uStemWindScale: this.props.stems.windScale,
+            uStemWindSpeed: this.props.stems.windSpeed,
+            uStemOrigin: this.stemInfo.stemOrigin,
         })
         const mesh = new THREE.Mesh(geometry, material);
         mesh.frustumCulled = false
@@ -506,8 +539,8 @@ export function onCanvasLoad(canvas: HTMLCanvasElement, properties: BambooProps)
     //         opacity: 0.5,
     //         transparent: true
     //     })
-    //     const mesh = new THREE.Mesh(geometry, material)
-    //     scene.add(mesh)
+    //     const bambooMesh = new THREE.Mesh(geometry, material)
+    //     scene.add(bambooMesh)
     // })
     //
     // // leaf stems
@@ -558,9 +591,9 @@ export function onCanvasLoad(canvas: HTMLCanvasElement, properties: BambooProps)
     //         opacity: 0.5,
     //         transparent: true
     //     })
-    //     const mesh = new THREE.Mesh(geometry, material)
-    //     mesh.position.copy(curve.origin)
-    //     scene.add(mesh)
+    //     const bambooMesh = new THREE.Mesh(geometry, material)
+    //     bambooMesh.position.copy(curve.origin)
+    //     scene.add(bambooMesh)
     // })
     //
     // const leafStemSecondarySeeds: Attributed<THREE.Vector3, {
@@ -612,9 +645,9 @@ export function onCanvasLoad(canvas: HTMLCanvasElement, properties: BambooProps)
     //         opacity: 0.5,
     //         transparent: true
     //     })
-    //     const mesh = new THREE.Mesh(geometry, material)
-    //     mesh.position.copy(curve.origin)
-    //     scene.add(mesh)
+    //     const bambooMesh = new THREE.Mesh(geometry, material)
+    //     bambooMesh.position.copy(curve.origin)
+    //     scene.add(bambooMesh)
     // })
     //
     // // leaves can grow on both primary and secondary stems
@@ -680,9 +713,9 @@ export function onCanvasLoad(canvas: HTMLCanvasElement, properties: BambooProps)
     //         opacity: 0.5,
     //         transparent: true
     //     })
-    //     const mesh = new THREE.Mesh(geometry, material)
-    //     mesh.position.copy(curve.origin)
-    //     scene.add(mesh)
+    //     const bambooMesh = new THREE.Mesh(geometry, material)
+    //     bambooMesh.position.copy(curve.origin)
+    //     scene.add(bambooMesh)
     // })
 
     const spec: BambooSpecFull = {
@@ -710,8 +743,8 @@ export function onCanvasLoad(canvas: HTMLCanvasElement, properties: BambooProps)
         }
     }
     const bamboo = new Bamboo(new THREE.Vector3(0.2, 0, 0.2), 1.5, 0.3, spec)
-    const mesh = bamboo.toMesh()
-    mesh.forEach((m) => scene.add(m))
+    const bambooMesh = bamboo.toMesh()
+    bambooMesh.forEach((m) => scene.add(m))
 
     // const knotGeometries = bamboo.knots.map((knot) => knot.unitGeometry())
     // const stemGeometries = bamboo.knots.flatMap((knot) =>
@@ -757,11 +790,11 @@ export function onCanvasLoad(canvas: HTMLCanvasElement, properties: BambooProps)
     //     })
     //     return new THREE.Mesh(geometry, material)
     // })
-    // knotMeshes.forEach((mesh) => scene.add(mesh))
-    // stemMeshes1.forEach((mesh) => scene.add(mesh))
-    // stemMeshes2.forEach((mesh) => scene.add(mesh))
-    // leafMeshes.forEach((mesh) => {
-    //     scene.add(mesh)
+    // knotMeshes.forEach((bambooMesh) => scene.add(bambooMesh))
+    // stemMeshes1.forEach((bambooMesh) => scene.add(bambooMesh))
+    // stemMeshes2.forEach((bambooMesh) => scene.add(bambooMesh))
+    // leafMeshes.forEach((bambooMesh) => {
+    //     scene.add(bambooMesh)
     // })
 
     const pointLight = new THREE.PointLight(0xffffff, 5)
@@ -823,6 +856,10 @@ export function onCanvasLoad(canvas: HTMLCanvasElement, properties: BambooProps)
         // if (delay < delta && delta < delay + duration) {
         //     const alpha = rate((delta - delay) / duration)
         // }
+
+        bambooMesh.forEach((mesh) => {
+            (mesh.material as THREE.ShaderMaterial).uniforms.uTime.value = delta
+        })
 
         controls.update()
 
