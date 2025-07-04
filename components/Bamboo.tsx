@@ -3,9 +3,7 @@
 import { FC, useCallback, useEffect, useState } from "react";
 import { onCanvasLoad } from "@/lib/bamboo";
 
-
-
-const Bamboo: FC<BambooProps> = (props) => {
+const Bamboo: FC<Omit<BambooSpec, "rng">> = (props) => {
     const [canvas, setCanvas] = useState<HTMLCanvasElement>()
     const canvasCallback = useCallback((node: HTMLCanvasElement | null) => {
         if (node) {

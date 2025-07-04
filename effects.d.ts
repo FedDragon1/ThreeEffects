@@ -1,31 +1,10 @@
-interface BambooProps {
-    bamboo: {
-        minHeight: number,
-        maxHeight: number,
-        windSpeed: number,
-        windScale: number,
-        bend: number,
-    },
-    knot: {
-        minHeight: number,
-        maxHeight: number
-    },
-    leaves: {
-        count: number,
-        windSpeed: number,
-        windScale: number
-    },
-    shader: {
-        near: number,
-        far: number
-    }
-}
-
-interface BambooSpecFull {
+interface BambooSpec {
     rng: () => number,
     bamboo: {
         windSpeed: number,
         windScale: number,
+        minHeight: number,
+        maxHeight: number,
     },
     knots: {
         uResolution: number,
@@ -40,6 +19,7 @@ interface BambooSpecFull {
         uResolution: number,
         vResolution: number,
         leafCount: number,
+        primaryStemChance: number,
         secondaryStemChance: number
     },
     shader: {

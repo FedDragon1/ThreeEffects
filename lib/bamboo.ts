@@ -20,7 +20,7 @@ class Bamboo {
     constructor(public origin: THREE.Vector3,
                 public height: number,
                 public knotHeight: number,
-                public props: BambooSpecFull,
+                public props: BambooSpec,
                 public splitScale: number = 0.05) {
         const { bamboo: { windScale, windSpeed } } = props;
         this.height = height;
@@ -57,7 +57,7 @@ class BambooKnot {
                 public tangent: THREE.Vector3,
                 public index: number,
                 public maxIndex: number,
-                public props: BambooSpecFull) {
+                public props: BambooSpec) {
 
         this.leafStems = this.spawnLeafStems()
     }
@@ -131,7 +131,7 @@ class BambooKnot {
         const n = this.props.knots.stemCount;
         for (let i = 0; i <= n; i++) {
             // allow 0.1 to 0.3
-            if (this.props.rng() < 0.268) {
+            if (this.props.rng() < this.props.stems.primaryStemChance) {
                 const t = 0.2 * i / n + 0.1
                 seeds.push(knotCurve.getPoint(t))
             }
@@ -160,7 +160,7 @@ class BambooLeafStem {
     constructor(public origin: THREE.Vector3,
                 public scale: number,
                 public knotInfo: { knotOrigin: THREE.Vector3, knotLength: number },
-                public props: BambooSpecFull) {
+                public props: BambooSpec) {
         this.rotationY = this.props.rng() * Math.PI * 2; // random rotation around Y axis
         this.leaves = this.spawnLeaves();
 
@@ -304,7 +304,7 @@ class BambooLeafStemSecondary {
                 public tangent: THREE.Vector3,
                 public rotationY: number,
                 public knotInfo: { knotOrigin: THREE.Vector3, knotLength: number },
-                public props: BambooSpecFull) {
+                public props: BambooSpec) {
         this.rotation = [this.props.rng() - 0.5, this.props.rng() - 0.5, this.props.rng() - 0.5]
         this.leaves = this.spawnLeaves();
     }
@@ -384,7 +384,7 @@ class BambooLeaf {
                 public rotationY: number,
                 public knotInfo: { knotOrigin: THREE.Vector3, knotLength: number },
                 public stemInfo: { stemOrigin: THREE.Vector3 },
-                public props: BambooSpecFull) {
+                public props: BambooSpec) {
         this.rotation = [(this.props.rng() - 0.5), (this.props.rng() - 0.5) * 2, (this.props.rng() - 0.5)]
     }
 
@@ -449,7 +449,7 @@ class BambooLeaf {
 
 let scene: THREE.Scene;
 
-export function onCanvasLoad(canvas: HTMLCanvasElement, properties: BambooProps) {
+export function onCanvasLoad(canvas: HTMLCanvasElement, properties: Omit<BambooSpec, "rng">) {
     // META INFO
 
     const aspRatio = canvas.clientWidth / canvas.clientHeight
@@ -467,32 +467,6 @@ export function onCanvasLoad(canvas: HTMLCanvasElement, properties: BambooProps)
     const axesHelper = new THREE.AxesHelper();
     scene.add(axesHelper)
 
-    const spec: BambooSpecFull = {
-        rng: mulberry32(),
-        bamboo: {
-            windScale: properties.bamboo.windScale,
-            windSpeed: properties.bamboo.windSpeed
-        },
-        knots: {
-            uResolution: 10,
-            vResolution: 8,
-            stemCount: 20,
-            minHeight: 0.15,
-            maxHeight: 0.4
-        },
-        stems: {
-            windSpeed: properties.leaves.windSpeed,
-            windScale: properties.leaves.windScale,
-            uResolution: 10,
-            vResolution: 8,
-            leafCount: properties.leaves.count,
-            secondaryStemChance: 0.3
-        },
-        shader: {
-            near: 5,
-            far: 10
-        }
-    }
 
     const basePlane = new THREE.PlaneGeometry(1, 1);
     basePlane.rotateX(-Math.PI / 2)
@@ -504,14 +478,12 @@ export function onCanvasLoad(canvas: HTMLCanvasElement, properties: BambooProps)
     const bamboos = seeds.map((seed) => {
         const height = properties.bamboo.minHeight + Math.random() * (properties.bamboo.maxHeight - properties.bamboo.minHeight);
         const knotHeight = Math.min(
-            properties.knot.minHeight + Math.random() * (properties.knot.maxHeight - properties.knot.minHeight),
+            properties.knots.minHeight + Math.random() * (properties.knots.maxHeight - properties.knots.minHeight),
             height * 0.4
         );
         return new Bamboo(seed, height, knotHeight, {
-            ...spec,
-            bamboo: {
-                ...spec.bamboo,
-            }
+            ...properties,
+            rng: mulberry32()
         });
     })
     const bambooMesh = bamboos.flatMap((bamboo) => bamboo.toMesh())
