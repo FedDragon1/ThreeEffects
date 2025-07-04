@@ -134,10 +134,49 @@ vec4 wind(vec3 p1, float y) {
     return noise;
 }
 
+mat3 axisAngleMat(vec3 axis, float angle) {
+    float c = cos(angle);
+    float s = sin(angle);
+    float t = 1.0 - c;
+
+    float x = axis.x, y = axis.y, z = axis.z;
+
+    return mat3(
+    t * x * x + c,     t * x * y - s * z, t * x * z + s * y,
+    t * x * y + s * z, t * y * y + c,     t * y * z - s * x,
+    t * x * z - s * y, t * y * z + s * x, t * z * z + c
+    );
+}
+
+mat3 alignRot(in vec3 v) {
+    vec3 u = vec3(0., 1., 0.);
+    float angle = acos(dot(u, v));
+
+    if (length(v) < 1e-4 || isnan(angle)) {
+        return mat3(1.0); // Identity matrix if v is too small
+    }
+
+    vec3 axis = normalize(cross(u, v));
+    mat3 R = axisAngleMat(axis, angle * uStemWindScale);
+
+    return R;
+}
+
 void main() {
     vUv = uv;
-    vPosition = uOrigin + position;
-    vec4 localPos = vec4(vPosition, 1.) + wind(uKnotOrigin, uStemOrigin.y - uKnotOrigin.y);
+
+    float y = uStemOrigin.y - uKnotOrigin.y;
+
+    vec4 offset = wind(uKnotOrigin, y);
+    vec3 v = normalize(vec3(offset.x, y, offset.z));
+    mat3 R = alignRot(v);
+
+    vec3 rotOff = R * position;
+    vec3 rotOrigin = R * (uOrigin - uStemOrigin);
+
+    vPosition = uStemOrigin + rotOrigin + rotOff;
+
+    vec4 localPos = vec4(vPosition, 1.) + offset;
     vec4 myPos = modelViewMatrix * localPos;
     vZDepth = -myPos.z;
 
