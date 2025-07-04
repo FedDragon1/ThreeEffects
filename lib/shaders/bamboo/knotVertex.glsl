@@ -100,17 +100,18 @@ vec4 noise(in vec3 p) {
     int detail = 2;
     float roughness = 0.5;
     float lacunarity = 2.;
-    float scale = 5.;
+    float scale = 2.;
 
-    vec3 posXz = vec3(p.xz, 0.);
+    vec3 posXz = vec3(p.xz, 0.) / 4.;
     float pos = dot(p, vec3(0.4, 0.2, 0.4));
 
-    vec3 noise1 = vec3(fbm3D(posXz * pos, detail, lacunarity, roughness) - 0.5);
+    float ns = clamp(fbm3D(posXz * pos, detail, lacunarity, roughness) - 0.5, -1., 1.);
+    vec3 noise1 = vec3(ns);
 
     vec3 windSeed = vec3(uKnotWindSpeed * uTime, 0., 0.) + vec3(pos);
     vec3 noise2 = vec3(fbm3D(windSeed * scale, detail, lacunarity, roughness) - 0.5);
 
-    float heightFactor = pow(p.y / 4., 2.);
+    float heightFactor = min(pow(p.y / 4., 2.), 1.);
     vec3 noise = noise1 * noise2 * uKnotWindScale * heightFactor * vec3(1., 0., 1.);
 
     return vec4(noise, 0.);

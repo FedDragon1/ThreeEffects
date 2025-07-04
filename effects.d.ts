@@ -30,7 +30,9 @@ interface BambooSpecFull {
     knots: {
         uResolution: number,
         vResolution: number,
-        stemCount: number
+        stemCount: number,
+        minHeight: number,
+        maxHeight: number
     },
     stems: {
         windSpeed: number,
