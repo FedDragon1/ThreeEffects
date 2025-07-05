@@ -12,6 +12,14 @@ function zfill(input: any, width: number) {
     return str.padStart(width, '0');
 }
 
+const Pointer: FC<{ children: ReactNode, className?: string }> = ({ children, className }) => {
+    return (
+        <div className={`cursor-pointer ${className}`}>
+            {children}
+        </div>
+    )
+}
+
 const DemoFrame: FC<DemoFrameProps> = ({ children, index }) => {
     return (
         <div className={"w-screen h-screen relative bg-stone-300 isolate"}>
@@ -21,12 +29,12 @@ const DemoFrame: FC<DemoFrameProps> = ({ children, index }) => {
             <div className={"w-full h-full flex flex-col justify-between px-10 py-12 z-10"}>
                 <div className={"w-full flex justify-between"}>
                     <div className={"flex gap-16 items-center anim-b"}>
-                        <h1 className={"text-4xl"}>Fe</h1>
+                        <Pointer className={"text-4xl"}>Fe</Pointer>
                         <span className={"text-neutral-700 text-sm"}>Created by<br/>FedDragon</span>
                     </div>
                     <div className={"flex gap-10 items-center anim-b opacity-0 ![animation-delay:100ms]"}>
-                        <span>Works</span>
-                        <span>Contact</span>
+                        <Pointer>Works</Pointer>
+                        <Pointer>Contact</Pointer>
                         <Link href={"/test"}
                               className={"bg-neutral-900 rounded-full flex items-center gap-2 p-2 cursor-pointer"}>
                             <span className={"text-neutral-100 pl-2"}>Learn More</span>
@@ -49,14 +57,14 @@ const DemoFrame: FC<DemoFrameProps> = ({ children, index }) => {
                                 <span>{zfill(index, 3)}</span>
                             </div>
                             <div className={"flex flex-col gap-2 h-full"}>
-                                <span>X / Twitter</span>
-                                <span>Github</span>
-                                <span>Discord</span>
+                                <Pointer>X / Twitter</Pointer>
+                                <Pointer>Github</Pointer>
+                                <Pointer>Discord</Pointer>
                             </div>
                             <div className={"flex flex-col gap-2 h-full pl-8"}>
-                                <span>RED</span>
-                                <span>Experience</span>
-                                <span>Get In Touch</span>
+                                <Pointer>RED</Pointer>
+                                <Pointer>Experience</Pointer>
+                                <Pointer>Get In Touch</Pointer>
                             </div>
                         </div>
                         <div className={"anim-b opacity-0 ![animation-delay:300ms]"}>
