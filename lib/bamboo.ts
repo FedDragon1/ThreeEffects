@@ -202,7 +202,6 @@ class BambooLeafStem {
     }
 
     toMesh(): THREE.Mesh[] {
-        const leafMeshes = this.leaves.map((leaf) => leaf.toMesh())
         const stemGeometry = mergeGeometries([
             this.unitGeometry(),
             ...this.children.map((child) => child.unitGeometry())
@@ -220,7 +219,30 @@ class BambooLeafStem {
         })
         const stemMesh = new THREE.Mesh(stemGeometry, stemMaterial)
         stemMesh.frustumCulled = false;
-        return [stemMesh, ...leafMeshes]
+
+        const retMesh = [stemMesh]
+
+        const leafGeometries = this.leaves.map((leaf) => leaf.unitGeometry())
+        if (leafGeometries.length) {
+            const leafGeometry = mergeGeometries(leafGeometries)
+            const leafMaterial = new LeafMaterial({
+                uZMin: this.props.shader.near,
+                uZMax: this.props.shader.far,
+                uKnotWindScale: this.props.bamboo.windScale,
+                uKnotWindSpeed: this.props.bamboo.windSpeed,
+                uKnotLength: this.knotInfo.knotLength,
+                uKnotOrigin: this.knotInfo.knotOrigin,
+                uStemWindScale: this.props.stems.windScale,
+                uStemWindSpeed: this.props.stems.windSpeed,
+                uStemOrigin: this.origin
+            })
+            const leafMesh = new THREE.Mesh(leafGeometry, leafMaterial)
+            leafMesh.frustumCulled = false;
+
+            retMesh.push(leafMesh)
+        }
+
+        return retMesh
     }
 
     spawnLeaves(): BambooLeaf[] {
@@ -375,6 +397,10 @@ class BambooLeafStemSecondary {
     }
 }
 
+/**
+ * This class only takes care of the leaf geometry, the mesh is created in BambooLeafStem.
+ * This is done to avoid creating a mesh for each leaf, which would be too expensive.
+ */
 class BambooLeaf {
     rotation: [number, number, number]
 
@@ -398,7 +424,7 @@ class BambooLeaf {
     unitCurve(): Polyline {
         const e = new THREE.Euler(...this.rotation)
         const line = CurveLine.fromDirection(
-            new THREE.Vector3(0, 0, 0),
+            sub(this.origin, this.stemInfo.stemOrigin),
             this.tangent.clone().applyEuler(e),
             this.scale
         )
@@ -427,24 +453,24 @@ class BambooLeaf {
         )
     }
 
-    toMesh(): THREE.Mesh {
-        const geometry = this.unitGeometry()
-        const material = new LeafMaterial({
-            uOrigin: this.origin,
-            uZMin: this.props.shader.near,
-            uZMax: this.props.shader.far,
-            uKnotWindScale: this.props.bamboo.windScale,
-            uKnotWindSpeed: this.props.bamboo.windSpeed,
-            uKnotLength: this.knotInfo.knotLength,
-            uKnotOrigin: this.knotInfo.knotOrigin,
-            uStemWindScale: this.props.stems.windScale,
-            uStemWindSpeed: this.props.stems.windSpeed,
-            uStemOrigin: this.stemInfo.stemOrigin,
-        })
-        const mesh = new THREE.Mesh(geometry, material);
-        mesh.frustumCulled = false
-        return mesh
-    }
+    // toMesh(): THREE.Mesh {
+    //     const geometry = this.unitGeometry()
+    //     const material = new LeafMaterial({
+    //         uOrigin: this.origin,
+    //         uZMin: this.props.shader.near,
+    //         uZMax: this.props.shader.far,
+    //         uKnotWindScale: this.props.bamboo.windScale,
+    //         uKnotWindSpeed: this.props.bamboo.windSpeed,
+    //         uKnotLength: this.knotInfo.knotLength,
+    //         uKnotOrigin: this.knotInfo.knotOrigin,
+    //         uStemWindScale: this.props.stems.windScale,
+    //         uStemWindSpeed: this.props.stems.windSpeed,
+    //         uStemOrigin: this.stemInfo.stemOrigin,
+    //     })
+    //     const mesh = new THREE.Mesh(geometry, material);
+    //     mesh.frustumCulled = false
+    //     return mesh
+    // }
 }
 
 let scene: THREE.Scene;

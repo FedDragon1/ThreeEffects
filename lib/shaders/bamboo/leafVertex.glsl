@@ -11,9 +11,6 @@ uniform float uStemWindSpeed;
 uniform float uStemWindScale;
 uniform vec3 uStemOrigin;
 
-// LEAF INFO
-uniform vec3 uOrigin;
-
 varying vec2 vUv;
 varying vec3 vPosition;
 varying float vZDepth;
@@ -176,9 +173,7 @@ void main() {
     mat3 R = alignRot(v);
 
     vec3 rotOff = R * position;
-    vec3 rotOrigin = R * (uOrigin - uStemOrigin);
-
-    vPosition = uStemOrigin + rotOrigin + rotOff;
+    vPosition = uStemOrigin + rotOff;
 
     vec4 localPos = vec4(vPosition, 1.) + offset;
     vec4 myPos = modelViewMatrix * localPos;
