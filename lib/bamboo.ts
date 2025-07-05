@@ -557,8 +557,8 @@ export function onCanvasLoad(canvas: HTMLCanvasElement, properties: Omit<BambooS
     function initialCameraAnimation(alpha: number) {
         const t = alpha * 2;
         const z = 15 * 10 ** (-t)
-        const x = -3 * Math.exp(-1 * (t - 2) ** 2)
-        const y = -1 / 4 * t + 2;
+        const x = -2 * Math.exp(-1 * (t - 2) ** 2)
+        const y = -1 / 3 * t + 2;
         camPos = new THREE.Vector3(x, y, z);
         camera.position.set(x, y, z);
         camera.lookAt(0, targetY, 0);
