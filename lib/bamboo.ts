@@ -3,7 +3,7 @@ import gsap from "gsap"
 
 import { EffectComposer, RenderPass, } from "postprocessing";
 import { registerCanvasResizeListener, registerMouseMoveListener } from "@/lib/threeHelper";
-import { add, drawPoints, enumerate, mulberry32, mulScalar, sub, zip, } from "@/lib/nodes/utils";
+import { add, enumerate, mulberry32, mulScalar, sub, zip, } from "@/lib/nodes/utils";
 import { CurveCircle, CurveLine, Polyline } from "@/lib/nodes/curves";
 // @ts-ignore
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils";

@@ -27,7 +27,7 @@ const Bamboo: FC<Omit<BambooSpec, "rng">> = (props) => {
     }, [canvas]);
 
     return (
-        <DemoFrame>
+        <DemoFrame index={2}>
             <div className={"bg-zinc-200 w-full h-full"}>
                 <canvas ref={canvasCallback} className={"w-full h-full"}></canvas>
             </div>

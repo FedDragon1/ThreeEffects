@@ -1,7 +1,18 @@
 import { FC, ReactNode } from "react";
 import Link from "next/link";
 
-const DemoFrame: FC<{ children: ReactNode }> = ({ children }) => {
+interface DemoFrameProps {
+    children: ReactNode;
+    index: number
+}
+
+function zfill(input: any, width: number) {
+    const str = String(input);
+    // If the string is already >= width, padStart does nothing.
+    return str.padStart(width, '0');
+}
+
+const DemoFrame: FC<DemoFrameProps> = ({ children, index }) => {
     return (
         <div className={"w-screen h-screen relative bg-stone-300 isolate"}>
             <div className={"w-full h-full fixed top-0 flex items-center justify-center z-0"}>
@@ -35,7 +46,7 @@ const DemoFrame: FC<{ children: ReactNode }> = ({ children }) => {
                         <div className={"flex gap-12 items-stretch anim-b opacity-0 ![animation-delay:200ms]"}>
                             <div className={"flex flex-col justify-center items-start border px-6 self-stretch"}>
                                 <span>No.</span>
-                                <span>001</span>
+                                <span>{zfill(index, 3)}</span>
                             </div>
                             <div className={"flex flex-col gap-2 h-full"}>
                                 <span>X / Twitter</span>
