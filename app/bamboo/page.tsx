@@ -9,7 +9,7 @@ const spec: Omit<BambooSpec, "rng"> = {
         maxHeight: 3
     },
     knots: {
-        uResolution: 10,
+        uResolution: 8,
         vResolution: 8,
         stemCount: 20,
         minHeight: 0.15,
@@ -19,9 +19,9 @@ const spec: Omit<BambooSpec, "rng"> = {
         windSpeed: 0.05,
         windScale: 0.2,
         uResolution: 10,
-        vResolution: 8,
+        vResolution: 3,
         leafCount: 5,
-        primaryStemChance: 0.7,
+        primaryStemChance: 0.5,
         secondaryStemChance: 0.3
     },
     shader: {
