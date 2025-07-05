@@ -1,10 +1,9 @@
 import * as THREE from "three";
+import gsap from "gsap"
 
 import { EffectComposer, RenderPass, } from "postprocessing";
-import { registerCanvasResizeListener } from "@/lib/threeHelper";
-import { add, enumerate, mulberry32, mulScalar, sub, zip, } from "@/lib/nodes/utils";
-// @ts-ignore
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
+import { registerCanvasResizeListener, registerMouseMoveListener } from "@/lib/threeHelper";
+import { add, drawPoints, enumerate, mulberry32, mulScalar, sub, zip, } from "@/lib/nodes/utils";
 import { CurveCircle, CurveLine, Polyline } from "@/lib/nodes/curves";
 // @ts-ignore
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils";
@@ -22,7 +21,6 @@ class Bamboo {
                 public knotHeight: number,
                 public props: BambooSpec,
                 public splitScale: number = 0.05) {
-        const { bamboo: { windScale, windSpeed } } = props;
         this.height = height;
         this.knots = this.spawnKnots()
     }
@@ -452,53 +450,30 @@ class BambooLeaf {
             true
         )
     }
-
-    // toMesh(): THREE.Mesh {
-    //     const geometry = this.unitGeometry()
-    //     const material = new LeafMaterial({
-    //         uOrigin: this.origin,
-    //         uZMin: this.props.shader.near,
-    //         uZMax: this.props.shader.far,
-    //         uKnotWindScale: this.props.bamboo.windScale,
-    //         uKnotWindSpeed: this.props.bamboo.windSpeed,
-    //         uKnotLength: this.knotInfo.knotLength,
-    //         uKnotOrigin: this.knotInfo.knotOrigin,
-    //         uStemWindScale: this.props.stems.windScale,
-    //         uStemWindSpeed: this.props.stems.windSpeed,
-    //         uStemOrigin: this.stemInfo.stemOrigin,
-    //     })
-    //     const mesh = new THREE.Mesh(geometry, material);
-    //     mesh.frustumCulled = false
-    //     return mesh
-    // }
 }
-
-let scene: THREE.Scene;
 
 export function onCanvasLoad(canvas: HTMLCanvasElement, properties: Omit<BambooSpec, "rng">) {
     // META INFO
 
     const aspRatio = canvas.clientWidth / canvas.clientHeight
-    scene = new THREE.Scene()
+    const scene = new THREE.Scene()
     const camera = new THREE.PerspectiveCamera(75, aspRatio, 0.1, 1000)
     const renderer = new THREE.WebGLRenderer({
         canvas,
         alpha: true,
         antialias: true
     })
-    camera.position.set(0, 0, 4);
+    const targetY = 1.3
+    camera.position.set(0, 2, 10);
+    camera.lookAt(0, targetY, 0)
 
     // 3D MODELS
 
-    const axesHelper = new THREE.AxesHelper();
-    scene.add(axesHelper)
-
-
-    const basePlane = new THREE.PlaneGeometry(1, 1);
+    const basePlane = new THREE.PlaneGeometry(2, 2);
     basePlane.rotateX(-Math.PI / 2)
 
     const seeds = distributePointsOnFaces("poisson disk", {
-        geometry: basePlane, selection: true, densityMax: 10, densityFactor: 1, distanceMin: 0.2
+        geometry: basePlane, selection: true, densityMax: 10, densityFactor: 0.8, distanceMin: 0.4
     })
 
     const bamboos = seeds.map((seed) => {
@@ -530,55 +505,75 @@ export function onCanvasLoad(canvas: HTMLCanvasElement, properties: Omit<BambooS
     composer.addPass(new RenderPass(scene, camera))
 
     const resizeCleanUp = registerCanvasResizeListener({ canvas, renderer, composer, camera })
-    // const moveCleanUp = registerMouseMoveListener(canvas, (u, v) => {
-    //     const up = (u - 0.5) / 2,
-    //         vp = (v - 0.5) / 2
-    //
-    //     gsap.to(flower.rotation, {
-    //         x: up,
-    //         y: Math.PI / 4,
-    //         z: Math.PI / 6 + vp,
-    //         duration: 0.5,
-    //         ease: "power2.out",
-    //         overwrite: true,
-    //         onUpdate() {
-    //             flower.quaternion.setFromEuler(flower.rotation)
-    //         }
-    //     })
-    //
-    //     gsap.to(flower.position, {
-    //         x: up,
-    //         y: -vp,
-    //         duration: 0.5,
-    //         ease: "power2.out",
-    //         overwrite: true
-    //     })
-    // })
+    const moveCleanUp = registerMouseMoveListener(canvas, (u, v) => {
+        if (delta <= duration) {
+            return  // first few seconds wait for animation
+        }
 
-    // add orbital control
-    const controls = new OrbitControls(camera, renderer.domElement)
+        // delay for 1s before full wiggle
+        const factor = Math.min(delta - duration, 1)
+
+        const up = (u - 0.5) / 2 * factor,
+            vp = (v - 0.5) / 2 * factor
+
+        const target = new THREE.Vector3(0, targetY, 0);
+        const offset = new THREE.Vector3()
+            .copy(camPos)
+            .sub(target);
+
+        // 2. convert that vector to spherical coords
+        const r     = offset.length();
+        const theta = Math.atan2(offset.z, offset.x);        // horizontal angle
+        const phi   = Math.asin(offset.y / r);                // vertical angle
+
+        // 3. add your wiggle deltas
+        const newTheta = theta + up;
+        const newPhi   = phi   + vp;
+
+        // 4. back to Cartesian, offset from the same target
+        const x = target.x + r * Math.cos(newPhi) * Math.cos(newTheta);
+        const y = target.y + r * Math.sin(newPhi);
+        const z = target.z + r * Math.cos(newPhi) * Math.sin(newTheta);
+
+        gsap.to(camera.position, {
+            x, y, z,
+            duration: 0.5,
+            ease: "power2.out",
+            overwrite: true,
+            onUpdate() {
+                camera.lookAt(target);
+            }
+        });
+    })
 
     // RENDER LOOP
     const clock = new THREE.Clock()
+    let delta: number = 0;
+    let camPos: THREE.Vector3;
 
-    const delay = 0.5
     const duration = 3
-    const rate = (x: number) => 1 - (Math.sin(2 * Math.PI * x)) / (2 * Math.PI * x)
-
     let handle: number
 
-    function render() {
-        const delta = clock.getElapsedTime()
+    function initialCameraAnimation(alpha: number) {
+        const t = alpha * 2;
+        const z = 15 * 10 ** (-t)
+        const x = -3 * Math.exp(-1 * (t - 2) ** 2)
+        const y = -1 / 4 * t + 2;
+        camPos = new THREE.Vector3(x, y, z);
+        camera.position.set(x, y, z);
+        camera.lookAt(0, targetY, 0);
+    }
 
-        // if (delay < delta && delta < delay + duration) {
-        //     const alpha = rate((delta - delay) / duration)
-        // }
+    function render() {
+        delta = clock.getElapsedTime()
+
+        if (delta <= duration) {
+            initialCameraAnimation(delta / duration)
+        }
 
         bambooMesh.forEach((mesh) => {
             (mesh.material as THREE.ShaderMaterial).uniforms.uTime.value = delta
         })
-
-        controls.update()
 
         handle = requestAnimationFrame(render)
         composer.render()
@@ -594,7 +589,7 @@ export function onCanvasLoad(canvas: HTMLCanvasElement, properties: Omit<BambooS
     return () => {
         cancelAnimationFrame(getHandle())
         resizeCleanUp()
-        // moveCleanUp()
+        moveCleanUp()
         renderer.dispose()
     }
 }

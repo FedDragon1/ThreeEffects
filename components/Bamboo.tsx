@@ -20,7 +20,7 @@ const Bamboo: FC<Omit<BambooSpec, "rng">> = (props) => {
 
     return (
         <div className={"bg-zinc-200 w-full h-full"}>
-            <canvas ref={canvasCallback} className={"w-full aspect-square"}></canvas>
+            <canvas ref={canvasCallback} className={"w-full h-full"}></canvas>
         </div>
     )
 }

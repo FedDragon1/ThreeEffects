@@ -25,8 +25,8 @@ const spec: Omit<BambooSpec, "rng"> = {
         secondaryStemChance: 0.3
     },
     shader: {
-        near: 5,
-        far: 10
+        near: 2,
+        far: 4
     }
 }
 
